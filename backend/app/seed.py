@@ -10,6 +10,20 @@ def init_db():
     );
     CREATE TABLE IF NOT EXISTS consumptions(id INTEGER PRIMARY KEY AUTOINCREMENT, note TEXT, result_json TEXT, created_at TEXT);
     CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT);
+    CREATE TABLE IF NOT EXISTS shortfall_intents(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_id INTEGER NOT NULL,
+      layer TEXT,
+      demand_qty REAL NOT NULL,
+      short_qty REAL NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      deductions_json TEXT NOT NULL DEFAULT '[]',
+      lot_id INTEGER,
+      created_at TEXT NOT NULL,
+      confirmed_at TEXT
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_intent_pending
+      ON shortfall_intents(item_id) WHERE status='pending';
     """)
     if c.execute("SELECT COUNT(*) c FROM items").fetchone()["c"] == 0:
         c.executemany("INSERT INTO items(name,layer,unit) VALUES (?,?,?)", [

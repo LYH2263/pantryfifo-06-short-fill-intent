@@ -29,3 +29,12 @@ h1,h2 { font-family: "Space Grotesk", sans-serif; }
 button { background: var(--teal); color: #fff; border: 0; border-radius: 10px; padding: 8px 12px; font: inherit; cursor: pointer; }
 input, select { padding: 8px; border-radius: 8px; border: 1px solid var(--line); font: inherit; margin: 4px 0 10px; width: 100%; max-width: 320px; }
 .muted { color: #5a7a7e; font-size: 13px; }
+.shortfall-card {
+  margin-top: 12px; padding: 12px 14px; border-radius: 14px; max-width: 480px;
+  background: #fff4ec; border: 1px solid #f0c9a8;
+}
+.shortfall-card button { margin-top: 8px; }
+.intent-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; }
+.intent-row input { width: auto; max-width: 180px; margin: 0; }
+.intent-row .muted { margin-right: auto; }
+.badge-ok { background: #e2f3ea; color: #1f7a4d; border: 1px solid #b6e0c8; border-radius: 999px; padding: 4px 10px; font-size: 13px; }

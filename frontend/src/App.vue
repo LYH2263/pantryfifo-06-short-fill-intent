@@ -10,6 +10,7 @@
         <router-link to="/layer/lower">下层</router-link>
         <router-link to="/inbound">入库</router-link>
         <router-link to="/consume">消费</router-link>
+        <router-link to="/intents">补位</router-link>
         <router-link to="/settings">设置</router-link>
       </nav>
       <router-view />

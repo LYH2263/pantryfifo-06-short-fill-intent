@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from app import seed
 from app.db import connect
 from app.engines.fefo import consume_fefo, expire_lots
+from app.modules import replenish_intent as replenish
 
 app = FastAPI(title="Pantryfifo", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -80,7 +81,10 @@ def consume(body: ConsumeIn):
     if not result["ok"] and result["reason"] == "qty_non_positive":
         c.close(); raise HTTPException(400, result["reason"])
     if not result["ok"]:
-        c.close(); raise HTTPException(409, result)
+        # 短量失败:扣减不落地,全层余量保持失败前;只登记补位意图(品项+缺口量)。
+        intent_id = replenish.register(c, body.item_id, result["short"])
+        c.commit(); c.close()
+        raise HTTPException(409, {**result, "item_id": body.item_id, "intent_id": intent_id})
     for d in result["deductions"]:
         c.execute("UPDATE lots SET qty_remain = qty_remain - ? WHERE id=?", (d["take"], d["lot_id"]))
         rem = c.execute("SELECT qty_remain FROM lots WHERE id=?", (d["lot_id"],)).fetchone()["qty_remain"]
@@ -98,6 +102,27 @@ def expire_sweep():
     for i in ids:
         c.execute("UPDATE lots SET status='expired' WHERE id=?", (i,))
     c.commit(); c.close(); return {"expired_ids": ids}
+
+@app.get("/api/intents")
+def intents(status: str | None = None):
+    c = connect(); rows = replenish.list_intents(c, status); c.close(); return rows
+
+class ConfirmIn(BaseModel):
+    expiry: str | None = None
+
+@app.post("/api/intents/{intent_id}/confirm")
+def confirm_intent(intent_id: int, body: ConfirmIn | None = None):
+    c = connect()
+    try:
+        out = replenish.confirm(c, intent_id, body.expiry if body else None)
+    except replenish.IntentNotFound:
+        c.close(); raise HTTPException(404, "intent_not_found")
+    except replenish.ShortNonPositive:
+        c.rollback(); c.close(); raise HTTPException(400, "qty_non_positive")
+    except replenish.AlreadyFulfilled as e:
+        c.rollback(); c.close()
+        raise HTTPException(409, {"reason": e.reason, "intent_id": e.intent_id, "lot_id": e.lot_id})
+    c.commit(); c.close(); return out
 
 @app.get("/api/settings")
 def settings():
